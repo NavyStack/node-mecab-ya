@@ -4,7 +4,7 @@ var sq = require('shell-quote');
 var MECAB_LIB_PATH =
     process.env.MECAB_LIB_PATH ?
     process.env.MECAB_LIB_PATH :
-    __dirname + '/mecab';
+    '/opt/mecab';
 
 var buildCommand = function (text) {
     return 'LD_LIBRARY_PATH=' + MECAB_LIB_PATH + ' ' +
@@ -12,14 +12,13 @@ var buildCommand = function (text) {
 };
 
 var execMecab = function (text, callback) {
-    cp.exec(buildCommand(text), function(err, result) {
-        if (err) { return callback(err); }
-        callback(err, result);
-    });
-};
-
-var execMecabSync = function (text) {
-    return String(cp.execSync(buildCommand(text)));
+    var command = buildCommand(text);
+    cp.exec(command, function(err, stdout, stderr) {
+        if (err) {
+            return callback(err);
+        }
+        callback(null, stdout);
+    });    
 };
 
 var parseFunctions = {
@@ -41,12 +40,7 @@ var parseFunctions = {
         }
 
         return result;
-    },
-
-    'all': function (result, elems) {
-        result.push([elems[0]].concat(elems[1].split(',')));
-        return result;
-    },
+    }
 };
 
 var parse = function (text, method, callback) {
@@ -63,19 +57,8 @@ var parse = function (text, method, callback) {
             }
         }, []);
 
-        callback(err, result);
+        callback(null, result);
     });
-};
-
-var parseSync = function (text, method) {
-    ret = [];
-    result = execMecabSync(text).split('\n')
-    for (var i=0; i<result.length; i++) {
-        tmp = result[i].split('\t')
-        if (tmp.length>1)
-            parseFunctions[method](ret, tmp)
-    }
-    return ret;
 };
 
 var pos = function (text, callback) {
@@ -90,33 +73,8 @@ var nouns = function (text, callback) {
     parse(text, 'nouns', callback);
 };
 
-var all = function (text, callback) {
-    parse(text, 'all', callback);
-};
-
-var posSync = function (text) {
-    return parseSync(text, 'pos');
-}
-
-var morphsSync = function (text) {
-    return parseSync(text, 'morphs');
-}
-
-var nounsSync = function (text) {
-    return parseSync(text, 'nouns');
-}
-
-var allSync = function (text) {
-    return parseSync(text, 'all');
-}
-
 module.exports = {
     pos: pos,
     morphs: morphs,
-    nouns: nouns,
-    all: all,
-    posSync: posSync,
-    morphsSync: morphsSync,
-    nounsSync: nounsSync,
-    allSync: allSync,
+    nouns: nouns
 };
